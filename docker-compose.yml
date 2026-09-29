@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: webnovel_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: webnovel
+      POSTGRES_PASSWORD: webnovel123
+      POSTGRES_DB: webnovel_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    container_name: webnovel_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://webnovel:webnovel123@postgres:5432/webnovel_db
+      JWT_SECRET: super_secret_jwt_2026
+      PORT: 3000
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata:
