@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "ComicApp",
+    "slug": "comicapp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8F1"
+    },
+    "android": {
+      "package": "com.comicapp.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FF6A00"
+      }
+    },
+    "platforms": [
+      "android",
+      "ios",
+      "web"
+    ],
+    "plugins": [
+      "expo-asset",
+      "expo-secure-store",
+      "expo-font",
+      "expo-status-bar"
+    ]
+  }
+}
