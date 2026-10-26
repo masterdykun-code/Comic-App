@@ -1,0 +1,20 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview-apk": {
+      "distribution": "internal",
+      "developmentClient": false,
+      "environment": "preview",
+      "node": "24.19.0",
+      "env": {
+        "APP_VARIANT": "demo",
+        "EXPO_PUBLIC_API_BASE_URL": "http://192.168.1.43:4001/api"
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}

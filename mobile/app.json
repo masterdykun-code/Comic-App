@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "WebNovel Reader",
+    "slug": "webnovel-reader",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/book-icon.png",
+    "scheme": "webnovel-reader",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.webnovel.reader.demo",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/book-icon.png",
+        "backgroundColor": "#16786B"
+      }
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/book-icon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6F8F7"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "backgroundColor": "#F6F8F7",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5eb80c57-7bb2-4c0a-b16a-93e06184d61a"
+      }
+    },
+    "owner": "thienhieu123"
+  }
+}

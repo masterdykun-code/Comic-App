@@ -1,0 +1,270 @@
+@import '../stories/stories.css';
+.chapters-page h1 {
+  overflow-wrap: anywhere;
+}
+.chapters-title {
+  font-weight: 600;
+  color: #285650;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  min-width: 160px;
+  display: block;
+}
+.chapters-number {
+  color: #79918f;
+  font-size: 18px;
+  font-weight: 500;
+}
+.chapters-page-limit {
+  white-space: nowrap;
+  font-size: 11px;
+  color: #6d8385;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+}
+.chapters-page-limit select {
+  min-width: 65px;
+}
+.chapters-publish {
+  display: grid;
+  gap: 10px;
+}
+.stories-table .chapters-publish .stories-button {
+  min-height: 30px;
+  font-size: 11px;
+  padding: 6px 10px;
+}
+.chapters-publish > .alert {
+  max-width: 280px;
+  white-space: normal;
+}
+.chapters-reader {
+  overflow: hidden;
+}
+.chapters-novel {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  line-height: 2;
+  padding: 32px;
+  color: #40565e;
+  max-width: 860px;
+  margin: auto;
+}
+.chapters-reader-pages {
+  padding: 24px;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+}
+.chapters-reader-pages figure {
+  margin: 0;
+  max-width: 800px;
+  width: 100%;
+}
+.chapters-reader-pages figcaption {
+  font-size: 12px;
+  color: #7f9396;
+  margin-bottom: 8px;
+}
+.chapters-reader-pages img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 5px;
+  background: #f0f4f2;
+}
+.chapters-metadata-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.chapters-content-editor {
+  font-size: 15px !important;
+  line-height: 1.9;
+  min-height: 420px;
+  resize: vertical;
+}
+.chapters-save-metadata {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 24px 24px;
+}
+.chapters-pages-body {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+.chapters-pages-body > h3,
+.chapters-queue h3 {
+  color: #48636a;
+  font-size: 15px;
+  margin: 0;
+}
+.chapters-pages-body > .stories-file-label {
+  justify-self: start;
+}
+.chapters-page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chapters-page-grid li {
+  border: 1px solid #e0e7e5;
+  border-radius: 9px;
+  overflow: hidden;
+  min-width: 0;
+}
+.chapters-page-preview {
+  height: 200px;
+  position: relative;
+  background: #eff3f0;
+}
+.chapters-page-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.chapters-page-preview span {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  background: #fffe;
+  padding: 5px 9px;
+  color: #476268;
+}
+.chapters-page-actions {
+  padding: 9px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.chapters-page-actions button {
+  width: 34px;
+  height: 32px;
+  border: 1px solid #dae4df;
+  background: #fff;
+  color: #52776a;
+  border-radius: 5px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.chapters-page-actions button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.chapters-page-actions button:hover:not(:disabled) {
+  background: #f2f8f4;
+}
+.chapters-page-actions button:focus-visible {
+  outline: 3px solid #65b6a8;
+  outline-offset: 2px;
+}
+.chapters-queue {
+  padding: 20px;
+  background: #f7faf8;
+  border: 1px dashed #c9dcd0;
+  border-radius: 9px;
+  display: grid;
+  gap: 16px;
+}
+.chapters-queue > p {
+  color: #7b9090;
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+}
+.chapters-local-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
+}
+.chapters-local-image {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.chapters-local-image img {
+  width: 100%;
+  height: 140px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #edf2ef;
+}
+.chapters-local-image > span {
+  color: #718585;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.chapters-local-image .stories-button {
+  font-size: 10px;
+  padding: 7px;
+  min-height: 30px;
+}
+.chapters-save-pages {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px;
+  background: #f8fbf9;
+  border-top: 1px solid #e3ece7;
+}
+.chapters-save-pages p {
+  color: #7a8d8c;
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+}
+.chapters-warning {
+  padding: 0 24px 24px;
+}
+.chapters-progress {
+  display: grid;
+  gap: 9px;
+  font-size: 13px;
+  color: #40665a;
+}
+.chapters-progress progress {
+  width: 100%;
+  accent-color: #206d68;
+  height: 9px;
+}
+@media (max-width: 700px) {
+  .chapters-page .stories-section-heading {
+    flex-wrap: wrap;
+  }
+  .chapters-novel {
+    padding: 22px;
+    font-size: 15px;
+  }
+  .chapters-pages-body {
+    padding: 16px;
+  }
+  .chapters-save-pages {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 18px;
+  }
+}
+.chapters-drag-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted, #64756d);
+  font-size: 0.75rem;
+  padding: 6px;
+  cursor: grab;
+}
+.chapters-local-image[draggable='true'],
+.chapters-page-grid li[draggable='true'] {
+  cursor: grab;
+}

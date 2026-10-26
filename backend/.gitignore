@@ -1,0 +1,15 @@
+node_modules/
+storage/epub-covers/
+dist/
+test-results/
+.env
+.env.*
+!.env.example
+!.env.integration.example
+*.log
+catalog/tien-cong-khai-vat-review/.demo-state/
+src/generated/prisma/
+catalog/sample-library-v1/cache/
+catalog/sample-library-v1/.import-state/
+catalog/library-expansion-v2/cache/
+catalog/library-expansion-v2/.import-state/

@@ -1,0 +1,411 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "cjs"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Initial database structure and CHECK constraints: migrations/20261017154658_init.
+// Content relations restrict deletes while dependent records exist; delete explicitly
+// in an authorized transaction, or hide/ban records. ChapterUnlock alone cascades
+// with its chapter; the independent CoinTransaction ledger is retained.
+// UUIDs are immutable; NoAction avoids cascading updates on shared FK columns.
+// SQL CHECK constraints are maintained in migration.sql, outside Prisma Schema:
+// - ratings.score BETWEEN 1 AND 5
+// - reading_progress.progress_percent BETWEEN 0 AND 100
+// - chapters.chapter_number > 0 and chapter_pages.page_number > 0
+// - reading_progress.page_number IS NULL OR page_number > 0
+// - optional text_offset / scroll_offset must be nonnegative when present
+// Backend validation + transaction/locking (or database triggers) must enforce:
+// - only ADMIN may create/edit stories, chapters and pages; createdBy FK alone
+//   does not check a user's role or authorize the current request
+// - published NOVEL chapters contain nonblank text
+// - published COMIC chapters have at least one image page
+// Recheck these rules when changing story type or editing/removing content/pages.
+// Composite FKs below enforce matching stories for chapter references/replies.
+// Backend must also reject comment cycles when reparenting existing comments.
+
+enum UserRole {
+  USER
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+
+  @@map("user_status")
+}
+
+enum StoryType {
+  NOVEL
+  COMIC
+
+  @@map("story_type")
+}
+
+enum StoryStatus {
+  ONGOING
+  COMPLETED
+
+  @@map("story_status")
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+
+  @@map("publish_status")
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+
+  @@map("comment_status")
+}
+
+model User {
+  id           String     @id @default(uuid()) @db.Uuid
+  username     String     @unique
+  email        String     @unique
+  passwordHash String?    @map("password_hash")
+  displayName  String     @map("display_name")
+  avatarUrl    String?    @map("avatar_url")
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  createdStories  Story[]             @relation("StoryCreator")
+  favorites       Favorite[]
+  readingProgress ReadingProgress[]
+  readingHistory  ReadingHistory[]
+  ratings         Rating[]
+  comments        Comment[]
+  authSessions    AuthSession[]
+  bookmarks       Bookmark[]
+  passwordReset   PasswordReset?
+  coinWallet      CoinWallet?
+  chapterUnlocks  ChapterUnlock[]
+  coinActivities  CoinDailyActivity[]
+
+  @@index([role, status])
+  @@map("users")
+}
+
+model Story {
+  id            String        @id @default(uuid()) @db.Uuid
+  title         String
+  slug          String        @unique
+  type          StoryType
+  authorName    String        @map("author_name")
+  description   String
+  coverUrl      String        @map("cover_url")
+  status        StoryStatus   @default(ONGOING)
+  publishStatus PublishStatus @default(DRAFT) @map("publish_status")
+  createdBy     String        @map("created_by") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  creator         User              @relation("StoryCreator", fields: [createdBy], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  genres          StoryGenre[]
+  chapters        Chapter[]
+  favorites       Favorite[]
+  readingProgress ReadingProgress[]
+  readingHistory  ReadingHistory[]
+  ratings         Rating[]
+  comments        Comment[]
+  bookmarks       Bookmark[]
+
+  @@index([createdBy])
+  @@index([publishStatus, createdAt(sort: Desc)])
+  @@index([type, publishStatus, status, updatedAt(sort: Desc)])
+  @@map("stories")
+}
+
+model Genre {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  stories StoryGenre[]
+
+  @@map("genres")
+}
+
+model StoryGenre {
+  storyId String @map("story_id") @db.Uuid
+  genreId String @map("genre_id") @db.Uuid
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([storyId, genreId])
+  @@index([genreId, storyId])
+  @@map("story_genres")
+}
+
+model Chapter {
+  id            String        @id @default(uuid()) @db.Uuid
+  storyId       String        @map("story_id") @db.Uuid
+  chapterNumber Int           @map("chapter_number")
+  title         String
+  content       String?
+  isVip         Boolean       @default(false) @map("is_vip")
+  coinPrice     Int           @default(10) @map("coin_price")
+  publishStatus PublishStatus @default(DRAFT) @map("publish_status")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  story           Story             @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  pages           ChapterPage[]
+  readingProgress ReadingProgress[] @relation("ProgressChapter")
+  readingHistory  ReadingHistory[]  @relation("HistoryChapter")
+  bookmarks       Bookmark[]
+  unlocks         ChapterUnlock[]
+
+  @@unique([storyId, chapterNumber])
+  // Composite reference target: a chapter must belong to the supplied story.
+  @@unique([id, storyId])
+  @@index([storyId, publishStatus, chapterNumber])
+  @@map("chapters")
+}
+
+model ChapterPage {
+  id              String   @id @default(uuid()) @db.Uuid
+  chapterId       String   @map("chapter_id") @db.Uuid
+  pageNumber      Int      @map("page_number")
+  imageUrl        String   @map("image_url")
+  storagePublicId String?  @map("storage_public_id")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([chapterId, pageNumber])
+  @@map("chapter_pages")
+}
+
+model Favorite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  storyId   String   @map("story_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([userId, storyId])
+  @@index([storyId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("favorites")
+}
+
+model ReadingProgress {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  storyId         String   @map("story_id") @db.Uuid
+  chapterId       String   @map("chapter_id") @db.Uuid
+  textOffset      Int?     @map("text_offset")
+  pageNumber      Int?     @map("page_number")
+  scrollOffset    Int?     @map("scroll_offset")
+  // Decimal(5,2) stores 100.00 exactly; migration SQL enforces the 0..100 range.
+  progressPercent Decimal  @default(0) @map("progress_percent") @db.Decimal(5, 2)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  chapter Chapter @relation("ProgressChapter", fields: [chapterId, storyId], references: [id, storyId], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([userId, storyId])
+  @@index([storyId])
+  @@index([chapterId, storyId])
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("reading_progress")
+}
+
+model ReadingHistory {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  storyId   String   @map("story_id") @db.Uuid
+  chapterId String   @map("chapter_id") @db.Uuid
+  readAt    DateTime @default(now()) @map("read_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  chapter Chapter @relation("HistoryChapter", fields: [chapterId, storyId], references: [id, storyId], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([userId, readAt(sort: Desc)])
+  @@index([userId, storyId, readAt(sort: Desc)])
+  @@index([storyId])
+  @@index([chapterId, storyId])
+  @@map("reading_history")
+}
+
+model Rating {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  storyId    String   @map("story_id") @db.Uuid
+  score      Int
+  reviewText String?  @map("review_text")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story Story @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([userId, storyId])
+  @@index([storyId, createdAt(sort: Desc)])
+  @@map("ratings")
+}
+
+model Comment {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  storyId   String        @map("story_id") @db.Uuid
+  parentId  String?       @map("parent_id") @db.Uuid
+  content   String
+  status    CommentStatus @default(VISIBLE)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  user    User      @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story   Story     @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  // Restrict rather than SetNull: storyId is required and shared with story FK.
+  parent  Comment?  @relation("CommentReplies", fields: [parentId, storyId], references: [id, storyId], onDelete: Restrict, onUpdate: NoAction)
+  replies Comment[] @relation("CommentReplies")
+
+  @@unique([id, storyId])
+  @@index([parentId, storyId])
+  @@index([userId])
+  @@index([storyId, status, createdAt(sort: Desc)])
+  @@map("comments")
+}
+
+model AuthSession {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  refreshTokens RefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model RefreshToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  sessionId  String    @map("session_id") @db.Uuid
+  tokenHash  String    @unique @map("token_hash") @db.Char(64)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+
+  session AuthSession @relation(fields: [sessionId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// One saved position per user/chapter; independent of automatic reading progress.
+model Bookmark {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  storyId          String   @map("story_id") @db.Uuid
+  chapterId        String   @map("chapter_id") @db.Uuid
+  textOffset       Int?     @map("text_offset")
+  pageNumber       Int?     @map("page_number")
+  chapterUpdatedAt DateTime @map("chapter_updated_at") @db.Timestamptz(3)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  story   Story   @relation(fields: [storyId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  chapter Chapter @relation(fields: [chapterId, storyId], references: [id, storyId], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([userId, chapterId])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([chapterId, storyId])
+  @@index([storyId])
+  @@map("bookmarks")
+}
+
+// One outstanding email challenge per user. Only a keyed hash is persisted.
+model PasswordReset {
+  userId     String    @id @map("user_id") @db.Uuid
+  codeHash   String    @map("code_hash") @db.Char(64)
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+// Integer coins only. Rewards and purchases are serialized per wallet in Backend.
+model CoinWallet {
+  userId       String            @id @map("user_id") @db.Uuid
+  balance      Int               @default(0)
+  updatedAt    DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  transactions CoinTransaction[]
+
+  @@map("coin_wallets")
+}
+
+model CoinTransaction {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  eventKey     String     @unique @map("event_key")
+  kind         String
+  amount       Int
+  balanceAfter Int        @map("balance_after")
+  description  String
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  wallet       CoinWallet @relation(fields: [userId], references: [userId], onDelete: Restrict)
+
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@map("coin_transactions")
+}
+
+model ChapterUnlock {
+  userId    String   @map("user_id") @db.Uuid
+  chapterId String   @map("chapter_id") @db.Uuid
+  paidCoins Int      @map("paid_coins")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  // Deleting a story removes its grants, retaining the immutable wallet ledger.
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@id([userId, chapterId])
+  @@index([chapterId])
+  @@map("chapter_unlocks")
+}
+
+model CoinDailyActivity {
+  userId    String   @map("user_id") @db.Uuid
+  day       String   @db.VarChar(10)
+  kind      String   @db.VarChar(16)
+  targetId  String   @map("target_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  // Keep earned progress even when a favorite/history entry is removed.
+  @@id([userId, day, kind, targetId])
+  @@map("coin_daily_activities")
+}

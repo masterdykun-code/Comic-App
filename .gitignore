@@ -1,32 +1,55 @@
-# Dependencies
+# Dependencies and generated/build output
 node_modules/
-
-# Env
-.env
-.env.local
-.env.*.local
-
-# Backend
-backend/uploads/*
-!backend/uploads/.gitkeep
-backend/*.log
-logs/
-
-# Frontend / Expo
-.expo/
 dist/
+dist-*/
+build/
+coverage/
+.expo/
 web-build/
+test-results/
+playwright-report/
+*.tsbuildinfo
+*.log
+
+# Local configuration and credentials; commit placeholders only
+.env
+.env.*
+!.env.example
+!.env.integration.example
+*.local
+*.pem
+*.key
 *.jks
 *.keystore
+*.p8
+*.p12
+*.mobileprovision
+credentials.json
+.npmrc
 
-# OS / Editor
+# Personal content, imports, upload storage and database backups
+/backend/catalog/
+/backend/imports/
+/backend/storage/
+/backend/docs/research/
+backups/
+*.epub
+*.cbz
+*.cbr
+*.mobi
+*.azw3
+*.dump
+*.backup
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+*.apk
+*.aab
+*.ipa
+/backend/src/generated/prisma/
+
+# Local editor/OS files
+.idea/
 .DS_Store
 Thumbs.db
-.vscode/
-.idea/
-*.log
-npm-debug.log*
-
-# Misc
-*.tmp
-*.bak
